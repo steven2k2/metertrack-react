@@ -15,7 +15,7 @@ module.exports = {
     hot: true,
     historyApiFallback: true,
     open: true, // Automatically open the browser
-    port: 3000  // Use a standard port instead of a random one
+    port: 3010  // Use a standard port instead of a random one
   },
   module: {
     rules: [

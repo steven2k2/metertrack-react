@@ -38,3 +38,5 @@ yarn-debug.log*
 # Dependency locks (if using Yarn or PNPM)
 yarn.lock
 pnpm-lock.yaml
+
+private

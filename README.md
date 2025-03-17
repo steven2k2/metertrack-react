@@ -4,6 +4,10 @@
 MeterTrack is a utility meter reading web application built with **React, Material-UI, and Webpack**.
 It helps users manage and record utility meter readings efficiently.
 
+**Note:** This project is a "Work In Progress".
+
+![Screenshot of MeterTrack](./docs/screenshot-1.png)
+
 ## Setup Instructions
 ### **Clone the Repository**
 ```sh
@@ -20,13 +24,13 @@ npm install
 ```sh
 npm run dev
 ```
-✅ Runs the app in development mode at `http://localhost:3000/`.
+Runs the app in development mode at `http://localhost:3000/`.
 
 ### **Build for Production**
 ```sh
 npm run build
 ```
-✅ Compiles the app into the `/dist` folder for deployment.
+Compiles the app into the `/dist` folder for deployment.
 
 ---
 

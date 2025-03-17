@@ -1,5 +1,6 @@
 import React from "react";
+import Sample from "./components/Sample"; // Ensure the correct path based on your project structure
 
-const App = () => <h1>Welcome to MeterTrack!!!</h1>;
+const App = () => <Sample />;
 
 export default App;
