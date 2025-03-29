@@ -157,3 +157,195 @@ Below is a brief overview of each section:
    Includes supplementary materials such as mock data formats, export templates, or additional references useful during implementation.
 
 ---
+
+## 2. DATA DESIGN
+
+### 2.1 INTERNAL SOFTWARE DATA STRUCTURE
+
+MeterTrak’s internal structure is composed entirely of client-side components, using IndexedDB for persistent offline data storage. The application follows a modular architecture with models and service modules that handle core data entities such as `UserProfile`, `Property`, `Meter`, and `Reading`.
+
+At runtime, data resides in memory and is synchronized with the local IndexedDB store. Classes are used to encapsulate the logic associated with accessing, transforming, and validating these entities. All user actions—such as selecting properties, entering readings, and navigating screens—operate on these client-managed structures.
+
+In future versions, a backend server will mirror these structures for data syncing, audit logging, and remote reporting. Data exchanged between client and server will use the JSON format due to its compatibility with JavaScript and backend technologies.
+
+### 2.2 GLOBAL DATA STRUCTURE
+
+The global structure of the MeterTrak application will eventually be managed by a backend database (e.g. PostgreSQL or MySQL). This includes long-term storage for:
+
+- Users
+- Properties
+- Meters
+- Readings
+
+In the current offline version, these structures are mirrored using object stores within IndexedDB. The object model ensures consistency between the client app and eventual backend services, reducing transformation overhead during future integration.
+
+### 2.3 TEMPORARY DATA STRUCTURE
+
+Temporary structures are transient JavaScript objects created to manage the current application state during a session. These include:
+
+- Cached results from recent IndexedDB queries
+- In-progress meter readings
+- Selected properties or meters
+- Validation messages and UI flags
+
+These objects are discarded when the session ends or the app is reloaded.
+
+### 2.4 DATABASE DESCRIPTION
+
+The following SQL schema outlines the proposed backend relational database that will support MeterTrak’s persistent data layer:
+
+```sql
+-- Users
+CREATE TABLE users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(100) NOT NULL,
+  display_name VARCHAR(100),
+  role VARCHAR(20) DEFAULT 'reader',
+  is_active TINYINT(1) DEFAULT 1
+);
+
+-- Properties
+CREATE TABLE properties (
+  property_id INT AUTO_INCREMENT PRIMARY KEY,
+  address_street VARCHAR(100),
+  address_city VARCHAR(50),
+  address_region VARCHAR(50),
+  address_postal_code VARCHAR(10),
+  address_country VARCHAR(50)
+);
+
+-- Meters
+CREATE TABLE meters (
+  meter_id INT AUTO_INCREMENT PRIMARY KEY,
+  property_id INT NOT NULL,
+  meter_type VARCHAR(30),
+  serial_number VARCHAR(50),
+  last_reading_value VARCHAR(20),
+  last_reading_date DATETIME,
+  FOREIGN KEY (property_id) REFERENCES properties(property_id)
+);
+
+-- Readings
+CREATE TABLE readings (
+  reading_id INT AUTO_INCREMENT PRIMARY KEY,
+  meter_id INT NOT NULL,
+  user_id INT NOT NULL,
+  value VARCHAR(20),
+  timestamp DATETIME,
+  note TEXT,
+  photo_path VARCHAR(255),
+  latitude DECIMAL(10, 7),
+  longitude DECIMAL(10, 7),
+  FOREIGN KEY (meter_id) REFERENCES meters(meter_id),
+  FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+-- Sync Logs
+CREATE TABLE sync_logs (
+  sync_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  sync_timestamp DATETIME,
+  synced_records INT,
+  success TINYINT(1) DEFAULT 1,
+  FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+```
+
+This schema ensures proper normalisation, supports future integrations, and is designed to work seamlessly with the offline-first nature of the client application.
+
+---
+
+# 3. ARCHITECTURAL & COMPONENT-LEVEL DESIGN
+
+## 3.1 SYSTEM STRUCTURE
+
+The MeterTrak system is designed as a client-side, offline-first single-page web application (SPA), built with a forward-looking architecture that anticipates server integration in the future. This system is modular and comprises several 
+key parts:
+
+### Client-Side Application
+
+The frontend application leverages **React** and **Material UI (MUI)**, utilizing **IndexedDB** for local, persistent storage. Its architecture is modular and component-based, loosely aligning with the **Model-View-Controller (MVC)** pattern. The separation of functional logic, data storage, and UI presentation enhances maintainability.
+
+- **Functional Layer**: This layer encompasses models and controllers, which are responsible for managing application logic, including data retrieval, input validation, and state management.
+
+- **Presentation Layer**: Comprising reusable React components styled with MUI, this layer includes elements such as the custom **NumPad**, reading form, and property list. It is responsible for rendering data and capturing user interactions.
+
+- **Storage Layer**: The system employs **IndexedDB** (via a wrapper or custom hooks) to store properties, meters, and readings offline, allowing data to be packaged into JSON for synchronization later.
+
+### Server-Side (Future Phase)
+
+In future phases, the backend will be developed to provide an API for synchronization, data integrity validation, user authentication, and historical reporting. It is anticipated that the backend will utilize **Node.js** and **Express**, with **PostgreSQL** or **MySQL** serving as the database for structured data storage.
+
+---
+
+## 3.2 UserProfile Class
+
+The **UserProfile** class is integral to the MeterTrak application, representing a local user and maintaining essential identity, configuration, and audit data for offline reading sessions.
+
+### 3.2.1 Processing Narrative
+
+A **UserProfile** instance is instantiated when the application is launched for the first time or reset. This object manages critical user metadata, including:
+
+- User ID
+- Display name
+- Reading session history
+- Sync preferences (e.g., auto-export enabled)
+- Last login or sync timestamp
+
+This information is utilized throughout the application to personalize the user experience, tag readings, and prepare exports.
+
+### 3.2.2 Interface Description
+
+```plaintext
+UserProfile
+  constructor(displayName: string, email: string)
+  getDisplayName(): string
+  setDisplayName(newName: string): void
+  getEmail(): string
+  setEmail(newEmail: string): void
+  getId(): string
+  getLastSyncDate(): Date
+  setLastSyncDate(date: Date): void
+  getPreferences(): Preferences
+  setPreferences(prefs: Preferences): void
+  exportProfile(): JSON
+  importProfile(json: JSON): boolean
+```
+
+### 3.2.3 Processing Detail
+
+The **UserProfile** class is primarily tasked with storing and retrieving user-specific settings and metadata, without engaging in complex operations or business logic.
+
+#### 3.2.3.1 Design Class Hierarchy
+
+- The **UserProfile** is a self-contained object.
+- It may be referenced by **ReadingSession** or **ExportService**.
+- Currently, no subclassing is anticipated.
+
+#### 3.2.3.2 Restrictions
+
+- Only one **UserProfile** may exist per device.
+- A valid email address is required for identification.
+- The **userId** is immutable once created.
+
+#### 3.2.3.3 Performance Issues
+
+- The object is lightweight and resides in local **IndexedDB**.
+- No significant performance concerns are expected.
+- Sync operations involving **UserProfile** may only be delayed if network access is unavailable.
+
+#### 3.2.3.4 Design Constraints
+
+- Must support export/import to/from JSON to facilitate backup and synchronization.
+- Should persist across browser sessions.
+- Should be versioned to accommodate future changes in data structure.
+
+#### 3.2.3.5 Processing Detail for Each Operation
+
+- **constructor(displayName, email)**: This method instantiates a new **UserProfile** with the specified name and email, generating a UUID for **userId**.
+
+- **exportProfile()**: This method serializes the **UserProfile** object into JSON format for backup or transfer.
+
+- **importProfile(json)**: This method replaces the current profile state with the provided data, contingent on its validity.
+
+- **setPreferences(prefs)**: This method updates the user's synchronization and UI preferences.
