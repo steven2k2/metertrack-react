@@ -166,6 +166,7 @@ If a meter is temporarily inaccessible, such as being blocked by a vehicle, you 
 
 - To revisit bookmarks, tap **Run**, then tap **Bookmarked** to filter the list.
 
+![Bookmarked meters view](./images/wireframe/bookmarked-meters.png)
 
 ![Meter view showing a bookmarked meter with note: Business does not open until 10:00 AM](./images/wireframe/meter-bookmark.png)
 
